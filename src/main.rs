@@ -10,6 +10,7 @@ fn main() {
     const WIN_WIDTH: usize = 256;
     const WIN_HEIGHT: usize = 256;
     const FIXED_SIZE: bool = true;
+    const REFRESH_RATE: u64 = 60;
 
     let mut window = Window::new(
         "renderer",
@@ -26,7 +27,7 @@ fn main() {
 
     let mut buf = Buffer::new(WIDTH, HEIGHT, Pixel::black());
 
-    window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / 240)));
+    window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / REFRESH_RATE)));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if !FIXED_SIZE {
