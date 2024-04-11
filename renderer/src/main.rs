@@ -2,6 +2,7 @@ mod buf;
 
 use buf::{Buffer, Pixel};
 use minifb::{Key, Window, WindowOptions};
+use renderer::Vec3;
 use std::time::Duration;
 
 fn main() {
@@ -12,8 +13,10 @@ fn main() {
     const FIXED_SIZE: bool = true;
     const REFRESH_RATE: u64 = 60;
 
+    // Screen coordinates: 0..width Left to Right, 0..height Top to Bottom
+
     let mut window = Window::new(
-        "renderer",
+        "renderer_swallow",
         WIN_WIDTH,
         WIN_HEIGHT,
         WindowOptions {
@@ -24,10 +27,10 @@ fn main() {
         },
     )
     .unwrap();
+    window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / REFRESH_RATE)));
 
     let mut buf = Buffer::new(WIDTH, HEIGHT, Pixel::black());
-
-    window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / REFRESH_RATE)));
+    let pos = Vec3::new(1.0, 2.0, 3.0);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if !FIXED_SIZE {
@@ -35,12 +38,12 @@ fn main() {
             buf.resize(width, height);
         }
         let (width, height) = (buf.width(), buf.height());
-        buf.iter_pos_mut().for_each(|(x, y, p)| {
-            let uv = (x as f32 / width as f32, y as f32 / height as f32);
-            p.r = (uv.0 * (u8::MAX as f32)) as u8;
-            p.g = (uv.1 * (u8::MAX as f32)) as u8;
-            p.b = 0;
-        });
+        // buf.iter_pos_mut().for_each(|(x, y, p)| {
+        //     let uv = (x as f32 / width as f32, y as f32 / height as f32);
+        //     p.r = (uv.0 * (u8::MAX as f32)) as u8;
+        //     p.g = (uv.1 * (u8::MAX as f32)) as u8;
+        //     p.b = 0;
+        // });
 
         window
             .update_with_buffer(buf.as_rgba(), width, height)
