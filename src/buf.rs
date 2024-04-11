@@ -1,3 +1,4 @@
+#![allow(unused)]
 use bytemuck::Zeroable;
 
 #[derive(bytemuck::Pod, Zeroable, Clone, Copy)]
