@@ -1,3 +1,4 @@
+pub mod buf;
 use bytemuck::Zeroable;
 use renderer_macros::swizzle;
 

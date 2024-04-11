@@ -1,8 +1,5 @@
-mod buf;
-
-use buf::{Buffer, Pixel};
 use minifb::{Key, Window, WindowOptions};
-use renderer::Vec3;
+use renderer::buf::{Buffer, Pixel};
 use std::time::Duration;
 
 fn main() {
@@ -30,7 +27,6 @@ fn main() {
     window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / REFRESH_RATE)));
 
     let mut buf = Buffer::new(WIDTH, HEIGHT, Pixel::black());
-    let pos = Vec3::new(1.0, 2.0, 3.0);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         if !FIXED_SIZE {

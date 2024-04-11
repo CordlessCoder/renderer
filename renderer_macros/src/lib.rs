@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use winnow::{ascii, combinator, prelude::*, stream::AsBStr, token};
+use winnow::{ascii, combinator, prelude::*, token};
 
 fn generate_combination_indices(pool_size: usize, items: usize, mut cb: impl FnMut(&[usize])) {
     if items == 0 {
