@@ -7,6 +7,7 @@ use renderer_macros::swizzle;
 pub type FLT = f32;
 
 pub trait BasicVector {
+    /// Returns |vec|^2
     fn len_squared(&self) -> FLT;
     fn len(&self) -> FLT {
         self.len_squared().sqrt()
@@ -71,7 +72,8 @@ impl<T1: AsPrimitive<FLT>, T2: AsPrimitive<FLT>> From<(T1, T2)> for Vec2 {
 }
 impl BasicVector for Vec2 {
     fn len_squared(&self) -> FLT {
-        self.x * self.x + self.y * self.y
+        let Self { x, y } = self;
+        x * x + y * y
     }
     fn normalized(self) -> Self {
         let len = self.len();
@@ -214,8 +216,8 @@ impl<T1: AsPrimitive<FLT>, T2: AsPrimitive<FLT>, T3: AsPrimitive<FLT>> From<(T1,
 }
 impl BasicVector for Vec3 {
     fn len_squared(&self) -> FLT {
-        let xy = self.xy().len();
-        Vec2::new(xy, self.z).len_squared()
+        let Self { x, y, z } = self;
+        x * x + y * y + z * z
     }
     fn normalized(self) -> Self {
         let len = self.len();
@@ -370,9 +372,8 @@ impl<T1: AsPrimitive<FLT>, T2: AsPrimitive<FLT>, T3: AsPrimitive<FLT>, T4: AsPri
 }
 impl BasicVector for Vec4 {
     fn len_squared(&self) -> FLT {
-        let xy = self.xy().len();
-        let zw = self.zw().len();
-        Vec2::new(xy, zw).len_squared()
+        let Self { x, y, z, w } = self;
+        x * x + y * y + z * z + w * w
     }
     fn normalized(self) -> Self {
         let len = self.len();
