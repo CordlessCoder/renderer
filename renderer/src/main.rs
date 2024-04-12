@@ -1,7 +1,8 @@
 #![allow(unused, unreachable_code)]
 use minifb::{Key, Window, WindowOptions};
-use renderer::prelude::*;
 use std::time::Duration;
+
+use renderer::prelude::*;
 
 fn main() {
     const WIDTH: usize = 32;

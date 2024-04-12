@@ -60,61 +60,69 @@ pub fn swizzle(input: TokenStream) -> TokenStream {
     let arr = arr.parse_next(&mut input).expect("Failed to parse array");
 
     let int = ascii::dec_uint::<&str, usize, ()>;
-    let range = combinator::alt((
-        (int, "..=", int).map(|(start, _, end)| start..=end),
-        (int, "..", int).map(|(start, _, end)| start..=end - 1),
-        int.map(|val| val..=val),
-    ));
-    let range = combinator::preceded(ascii::multispace0, range)
+    let len = combinator::preceded(ascii::multispace0, int)
         .parse_next(&mut input)
-        .expect("Failed to parse range");
+        .expect("Failed to parse len");
     // assert!(
     //     input.trim().is_empty(),
     //     "Got unexpected input after the end of the arguments to the macro"
     // );
-    assert!(
-        *range.end() <= arr.len(),
-        "Got a range that would go beyond the provided array"
-    );
 
     let arrow = combinator::delimited(ascii::multispace0::<_, ()>, "=>", ascii::multispace0);
-    let mut callback = combinator::preceded(
+    let callback = combinator::preceded(
         arrow,
         token::take_while(
             ..,
             |ch: char| matches!(ch, '!' | '_' | 'a'..='z' | 'A'..='Z' | '0'..='9'),
         ),
     );
-    let callback = callback
-        .parse_next(&mut input)
-        .expect("Failed to parse callback");
+    // let callback = callback
+    //     .parse_next(&mut input)
+    let string = || {
+        combinator::delimited(
+            combinator::preceded(ascii::multispace0, '"'),
+            token::take_while(.., |ch: char| ch != '"'),
+            combinator::terminated('"', ascii::multispace0),
+        )
+    };
+
+    let literal =
+        |lit: &'static str| combinator::delimited(ascii::multispace0, lit, ascii::multispace0);
+    let prefix = combinator::preceded(literal("prefix"), string());
+    let suffix = combinator::preceded(literal("suffix"), string());
+    let (prefix, suffix) = combinator::alt((
+        callback.map(|cb: &str| (format!("{cb}("), ");".to_string())),
+        (
+            prefix.map(|pre: &str| pre.to_string()),
+            suffix.map(|suf: &str| suf.to_string()),
+        ),
+    ))
+    .parse_next(&mut input)
+    .expect("Failed to parse callback");
     let separator = combinator::delimited(
         ascii::multispace0::<_, ()>,
         combinator::alt(("separated by", "separated", "separator", "sep")),
         ascii::multispace0,
     );
-    let separator = combinator::terminated(separator, '"');
-    let separator = combinator::preceded(separator, token::take_while(.., |ch: char| ch != '"'));
-    let mut separator = combinator::terminated(separator, '"');
+    let mut separator = combinator::preceded(separator, string());
 
     let separator = separator.parse_next(&mut input).unwrap_or("\n");
 
     let mut out = String::new();
-    for len in range.clone() {
-        generate_combination_indices(arr.len(), len, |indices| {
-            out += callback;
-            out += "(";
-            indices
-                .iter()
-                .map(|&idx| arr[idx])
-                .for_each(|val| out += val);
-            indices.iter().map(|&idx| arr[idx]).for_each(|val| {
-                out += ", ";
-                out += val
-            });
-            out += ");";
-            out += separator;
-        })
-    }
+
+    generate_combination_indices(arr.len(), len, |indices| {
+        out += &prefix;
+        indices
+            .iter()
+            .map(|&idx| arr[idx])
+            .for_each(|val| out += val);
+        indices.iter().map(|&idx| arr[idx]).for_each(|val| {
+            out += ", ";
+            out += val
+        });
+        out += &suffix;
+        out += separator;
+    });
+
     out.parse().unwrap()
 }
