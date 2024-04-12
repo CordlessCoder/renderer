@@ -78,11 +78,7 @@ impl BasicVector for Vec2 {
         if len == 0.0 {
             return self;
         }
-        let Self { x, y } = self;
-        Self {
-            x: x / len,
-            y: y / len,
-        }
+        self / len
     }
     fn dot(self, rhs: Self) -> FLT {
         self.x * rhs.x + self.y * rhs.y
@@ -226,12 +222,7 @@ impl BasicVector for Vec3 {
         if len == 0.0 {
             return self;
         }
-        let Self { x, y, z } = self;
-        Self {
-            x: x / len,
-            y: y / len,
-            z: z / len,
-        }
+        self / len
     }
     fn dot(self, rhs: Self) -> FLT {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
@@ -388,13 +379,7 @@ impl BasicVector for Vec4 {
         if len == 0.0 {
             return self;
         }
-        let Self { x, y, z, w } = self;
-        Self {
-            x: x / len,
-            y: y / len,
-            z: z / len,
-            w: w / len,
-        }
+        self / len
     }
     fn dot(self, rhs: Self) -> FLT {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
