@@ -1,30 +1,89 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use bytemuck::Zeroable;
-use num_traits::{real::Real, AsPrimitive, Zero};
+use num_traits::{real::Real, AsPrimitive, MulAdd, Zero};
 use renderer_macros::swizzle;
 
-pub trait BasicVector {
+impl<T: Zero> Zero for Vec2<T> {
+    fn zero() -> Self {
+        Self {
+            x: T::zero(),
+            y: T::zero(),
+        }
+    }
+    fn is_zero(&self) -> bool {
+        self.x.is_zero() && self.y.is_zero()
+    }
+}
+impl<T: Zero> Zero for Vec3<T> {
+    fn zero() -> Self {
+        Self {
+            x: T::zero(),
+            y: T::zero(),
+            z: T::zero(),
+        }
+    }
+    fn is_zero(&self) -> bool {
+        self.x.is_zero() && self.y.is_zero() && self.z.is_zero()
+    }
+}
+impl<T: Zero> Zero for Vec4<T> {
+    fn zero() -> Self {
+        Self {
+            x: T::zero(),
+            y: T::zero(),
+            z: T::zero(),
+            w: T::zero(),
+        }
+    }
+    fn is_zero(&self) -> bool {
+        self.x.is_zero() && self.y.is_zero() && self.z.is_zero() && self.w.is_zero()
+    }
+}
+impl<T: Zero> Default for Vec2<T> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+impl<T: Zero> Default for Vec3<T> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+impl<T: Zero> Default for Vec4<T> {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+pub trait Vector {
     type Num;
+
+    /// Returns a vector with every component set to the value
+    fn splat(val: Self::Num) -> Self
+    where
+        Self::Num: Clone;
     /// \|vec\|^2
-    fn len_squared(&self) -> Self::Num;
+    fn len_squared(&self) -> Self::Num
+    where
+        Self::Num: Real;
     /// \|vec\|
-    fn len(&self) -> Self::Num;
+    fn len(&self) -> Self::Num
+    where
+        Self::Num: Real,
+    {
+        self.len_squared().sqrt()
+    }
     /// Returns a normalized vector
     ///
     /// Modifies the vector such as vec.len() = 1, but the direction is kept constant
     ///
     /// Returns a zero vector when provided with a zero vector
-    fn unit(self) -> Self;
-    fn dot(self, rhs: Self) -> Self::Num;
-    /// Returns a vector with every component set to the value
-    fn splat(val: Self::Num) -> Self
+    fn unit(self) -> Self
     where
-        Self::Num: Clone;
-    /// Returns the null vector
-    fn zero() -> Self
+        Self::Num: Real;
+    fn dot(self, rhs: Self) -> Self::Num
     where
-        Self::Num: Zero;
+        Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>;
 }
 
 pub trait IntoVector<T> {
@@ -129,18 +188,9 @@ impl<T, T1: Into<T>, T2: Into<T>> From<(T1, T2)> for Vec2<T> {
         Self::new(x.into(), y.into())
     }
 }
-impl<T> BasicVector for Vec2<T>
-where
-    T: Mul<T, Output = T> + Add<T, Output = T> + Real,
-{
+impl<T> Vector for Vec2<T> {
     type Num = T;
 
-    fn zero() -> Self {
-        Self {
-            x: T::zero(),
-            y: T::zero(),
-        }
-    }
     fn splat(val: T) -> Self
     where
         T: Clone,
@@ -150,21 +200,27 @@ where
             y: val,
         }
     }
-    fn len_squared(&self) -> Self::Num {
+    fn len_squared(&self) -> Self::Num
+    where
+        Self::Num: Real,
+    {
         let Self { x, y } = *self;
         x.mul_add(x, y * y)
     }
-    fn len(&self) -> Self::Num {
-        self.len_squared().sqrt()
-    }
-    fn unit(self) -> Self {
+    fn unit(self) -> Self
+    where
+        Self::Num: Real,
+    {
         let len = self.len();
         if len.is_zero() {
             return self;
         }
         self / len
     }
-    fn dot(self, rhs: Self) -> Self::Num {
+    fn dot(self, rhs: Self) -> Self::Num
+    where
+        Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>,
+    {
         self.x.mul_add(rhs.x, self.y * rhs.y)
     }
 }
@@ -304,16 +360,9 @@ impl<T, T1: Into<T>, T2: Into<T>, T3: Into<T>> From<(T1, T2, T3)> for Vec3<T> {
         Self::new(x.into(), y.into(), z.into())
     }
 }
-impl<T: Mul<T, Output = T> + Real> BasicVector for Vec3<T> {
+impl<T> Vector for Vec3<T> {
     type Num = T;
 
-    fn zero() -> Self {
-        Self {
-            x: T::zero(),
-            y: T::zero(),
-            z: T::zero(),
-        }
-    }
     fn splat(val: T) -> Self
     where
         T: Clone,
@@ -324,21 +373,27 @@ impl<T: Mul<T, Output = T> + Real> BasicVector for Vec3<T> {
             z: val,
         }
     }
-    fn len_squared(&self) -> Self::Num {
+    fn len_squared(&self) -> Self::Num
+    where
+        Self::Num: Real,
+    {
         let Self { x, y, z } = *self;
         x.mul_add(x, y.mul_add(y, z * z))
     }
-    fn len(&self) -> Self::Num {
-        self.len_squared().sqrt()
-    }
-    fn unit(self) -> Self {
+    fn unit(self) -> Self
+    where
+        Self::Num: Real,
+    {
         let len = self.len();
         if len.is_zero() {
             return self;
         }
         self / len
     }
-    fn dot(self, rhs: Self) -> Self::Num {
+    fn dot(self, rhs: Self) -> Self::Num
+    where
+        Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>,
+    {
         self.x.mul_add(rhs.x, self.y.mul_add(rhs.y, self.z * rhs.z))
     }
 }
@@ -488,17 +543,9 @@ impl<T, T1: Into<T>, T2: Into<T>, T3: Into<T>, T4: Into<T>> From<(T1, T2, T3, T4
         Self::new(x.into(), y.into(), z.into(), w.into())
     }
 }
-impl<T: Mul<T, Output = T> + Real> BasicVector for Vec4<T> {
+impl<T> Vector for Vec4<T> {
     type Num = T;
 
-    fn zero() -> Self {
-        Self {
-            x: T::zero(),
-            y: T::zero(),
-            z: T::zero(),
-            w: T::zero(),
-        }
-    }
     fn splat(val: T) -> Self
     where
         T: Clone,
@@ -510,21 +557,27 @@ impl<T: Mul<T, Output = T> + Real> BasicVector for Vec4<T> {
             w: val,
         }
     }
-    fn len_squared(&self) -> Self::Num {
+    fn len_squared(&self) -> Self::Num
+    where
+        Self::Num: Real,
+    {
         let Self { x, y, z, w } = *self;
         x.mul_add(x, y.mul_add(y, z.mul_add(z, w * w)))
     }
-    fn len(&self) -> Self::Num {
-        self.len_squared().sqrt()
-    }
-    fn unit(self) -> Self {
+    fn unit(self) -> Self
+    where
+        Self::Num: Real,
+    {
         let len = self.len();
         if len.is_zero() {
             return self;
         }
         self / len
     }
-    fn dot(self, rhs: Self) -> Self::Num {
+    fn dot(self, rhs: Self) -> Self::Num
+    where
+        Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>,
+    {
         self.x.mul_add(
             rhs.x,
             self.y.mul_add(rhs.y, self.z.mul_add(rhs.z, self.w * rhs.w)),

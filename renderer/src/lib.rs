@@ -2,7 +2,7 @@ mod types;
 pub use types::*;
 pub mod prelude {
     pub use super::buf::{Buffer, Pixel};
-    pub use super::vec::{BasicVector, IntoVector, Vec2, Vec3, Vec4};
+    pub use super::vec::{IntoVector, Vec2, Vec3, Vec4, Vector};
     pub type Vec2i = Vec2<i32>;
     pub type Vec3i = Vec3<i32>;
     pub type Vec4i = Vec4<i32>;
