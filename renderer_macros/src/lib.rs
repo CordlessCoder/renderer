@@ -63,10 +63,6 @@ pub fn swizzle(input: TokenStream) -> TokenStream {
     let len = combinator::preceded(ascii::multispace0, int)
         .parse_next(&mut input)
         .expect("Failed to parse len");
-    // assert!(
-    //     input.trim().is_empty(),
-    //     "Got unexpected input after the end of the arguments to the macro"
-    // );
 
     let arrow = combinator::delimited(ascii::multispace0::<_, ()>, "=>", ascii::multispace0);
     let callback = combinator::preceded(
@@ -76,8 +72,7 @@ pub fn swizzle(input: TokenStream) -> TokenStream {
             |ch: char| matches!(ch, '!' | '_' | 'a'..='z' | 'A'..='Z' | '0'..='9'),
         ),
     );
-    // let callback = callback
-    //     .parse_next(&mut input)
+
     let string = || {
         combinator::delimited(
             combinator::preceded(ascii::multispace0, '"'),

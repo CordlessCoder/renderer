@@ -3,3 +3,6 @@ resolver = "2"
 
 members = ["renderer", "renderer_macros"]
 default-members = ["renderer"]
+
+[profile.dev.package.renderer_macros]
+opt-level = 3
