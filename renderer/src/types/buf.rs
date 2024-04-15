@@ -89,9 +89,15 @@ impl Buffer {
         }
         Some(unsafe { self.get_unchecked_mut(x, y) })
     }
+    /// # Safety
+    ///
+    /// Requires x < width, y < height
     pub unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Pixel {
         self.pixels.get_unchecked(y * self.width + x)
     }
+    /// # Safety
+    ///
+    /// Requires x < width, y < height
     pub unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Pixel {
         self.pixels.get_unchecked_mut(y * self.width + x)
     }
@@ -105,26 +111,24 @@ impl Buffer {
         };
         *pixel = value;
     }
-    pub fn iter<'s>(&'s self) -> impl Iterator<Item = &'s Pixel> + 's {
+    pub fn iter(&self) -> impl Iterator<Item = &Pixel> {
         self.pixels.iter()
     }
-    pub fn iter_mut<'s>(&'s mut self) -> impl Iterator<Item = &'s mut Pixel> + 's {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Pixel> {
         self.pixels.iter_mut()
     }
-    pub fn iter_pos<'s>(&'s self) -> impl Iterator<Item = (usize, usize, &'s Pixel)> + 's {
+    pub fn iter_pos(&self) -> impl Iterator<Item = (usize, usize, &Pixel)> {
         self.pixels
             .chunks_exact(self.width)
             .enumerate()
             .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, pixel)| (x, y, pixel)))
     }
-    pub fn iter_pos_mut<'s>(
-        &'s mut self,
-    ) -> impl Iterator<Item = (usize, usize, &'s mut Pixel)> + 's {
+    pub fn iter_pos_mut(&mut self) -> impl Iterator<Item = (usize, usize, &mut Pixel)> {
         self.pixels
             .chunks_exact_mut(self.width)
             .enumerate()
             .flat_map(|(y, row)| {
-                row.into_iter()
+                row.iter_mut()
                     .enumerate()
                     .map(move |(x, pixel)| (x, y, pixel))
             })

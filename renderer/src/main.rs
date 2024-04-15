@@ -1,6 +1,7 @@
 #![allow(unused, unreachable_code)]
 use minifb::{Key, Window, WindowOptions};
-use std::time::Duration;
+use num_traits::Float;
+use std::{sync::atomic::AtomicU32, time::Duration};
 
 use renderer::prelude::*;
 
@@ -9,19 +10,21 @@ fn main() {
     const HEIGHT: usize = 32;
     const WIN_WIDTH: usize = 256;
     const WIN_HEIGHT: usize = 256;
-    const FIXED_SIZE: bool = true;
+    const FIXED_SIZE: bool = false;
     const REFRESH_RATE: u64 = 60;
 
     // Screen coordinates: 0..width Left to Right, 0..height Top to Bottom
 
     let mut window = Window::new(
-        "renderer_swallow",
+        "renderer",
         WIN_WIDTH,
         WIN_HEIGHT,
         WindowOptions {
-            borderless: true,
-            resize: true,
+            // borderless: true,
+            title: true,
+            resize: !FIXED_SIZE,
             scale: minifb::Scale::FitScreen,
+            // transparency: true,
             ..WindowOptions::default()
         },
     )
@@ -36,11 +39,24 @@ fn main() {
             buf.resize(width, height);
         }
         let (width, height) = (buf.width(), buf.height());
+        let min = width.min(height);
+        let max = width.max(height);
+        let maxlen = max as f32 / 2.;
+        let minlen = min as f32 / 2.;
+        let feather = 3.;
+        let per_pixel = feather / max as f32;
         buf.iter_pos_mut().for_each(|(x, y, p)| {
-            let uv = (x as f32 / width as f32, y as f32 / height as f32);
-            p.r = (uv.0 * (u8::MAX as f32)) as u8;
-            p.g = (uv.1 * (u8::MAX as f32)) as u8;
-            p.b = 0;
+            let mid = vec2f(width, height) / 2.0;
+            let pos = vec2f(x, y);
+            let pos = pos - mid;
+            let x = pos.len() / minlen;
+            let diff = (x - 1.0).clamp(0.0, 1.0);
+            let x = if diff == 0. {
+                255
+            } else {
+                ((per_pixel - diff).clamp(0.0, 1.0) / feather * max as f32 * 256.) as u8
+            };
+            *p = Pixel::new(x, x, x, 255);
         });
 
         window

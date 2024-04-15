@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use bytemuck::Zeroable;
-use num_traits::{real::Real, AsPrimitive, MulAdd, Zero};
+use num_traits::{real::Real, AsPrimitive, Float, MulAdd, Zero};
 use renderer_macros::swizzle;
 
 impl<T: Zero> Zero for Vec2<T> {
@@ -55,6 +55,7 @@ impl<T: Zero> Default for Vec4<T> {
         Self::zero()
     }
 }
+#[allow(clippy::len_without_is_empty)]
 pub trait Vector {
     type Num;
 
@@ -85,6 +86,24 @@ pub trait Vector {
     where
         Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>;
 }
+
+pub trait CompleteVector<Rhs>:
+    Sized
+    + Clone
+    + Vector
+    + Neg
+    + Add<Rhs, Output = Self>
+    + Sub<Rhs, Output = Self>
+    + Sub<Rhs, Output = Self>
+    + Mul<<Self as Vector>::Num, Output = Self>
+    + Div<<Self as Vector>::Num, Output = Self>
+    + AddAssign<Rhs>
+    + SubAssign<Rhs>
+    + MulAssign<<Self as Vector>::Num>
+    + Div<<Self as Vector>::Num, Output = Self>
+{
+}
+impl<T> CompleteVector<Vec2<T>> for Vec2<T> {}
 
 pub trait IntoVector<T> {
     type Vector;
@@ -175,6 +194,13 @@ impl<T> Vec2<T> {
             x: x.into(),
             y: y.into(),
         }
+    }
+    /// Returns the angle between the vectors in radians
+    pub fn angle_to(&self, rhs: &Self) -> T
+    where
+        T: Float + MulAdd<T, Output = T>,
+    {
+        (self.dot(*rhs) / (self.len() * rhs.len())).acos()
     }
 }
 impl<T: Clone> Vec2<T> {
