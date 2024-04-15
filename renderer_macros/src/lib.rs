@@ -112,7 +112,7 @@ pub fn swizzle(input: TokenStream) -> TokenStream {
             .map(|&idx| arr[idx])
             .for_each(|val| out += val);
         indices.iter().map(|&idx| arr[idx]).for_each(|val| {
-            out += ", ";
+            out += ",";
             out += val
         });
         out += &suffix;

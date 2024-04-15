@@ -246,9 +246,9 @@ impl<T> Vec2<T> {
 }
 impl<T: Clone> Vec2<T> {
     // These provide methods such as .xy to extract a group of values into a new vec
-    swizzle!([x, y] 2 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y] 3 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y] 4 prefix "implement_swizzle!(T, " suffix ");");
+    swizzle!([x, y] 2 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y] 3 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y] 4 prefix "implement_swizzle!(T," suffix ");");
 }
 impl<T, T1: Into<T>, T2: Into<T>> From<(T1, T2)> for Vec2<T> {
     fn from((x, y): (T1, T2)) -> Self {
@@ -418,9 +418,9 @@ impl<T: Clone> Vec3<T> {
             z: self.x * rhs.y - self.y * rhs.x,
         }
     }
-    swizzle!([x, y, z] 2 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y, z] 3 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y, z] 4 prefix "implement_swizzle!(T, " suffix ");");
+    swizzle!([x, y, z] 2 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y, z] 3 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y, z] 4 prefix "implement_swizzle!(T," suffix ");");
 }
 impl<T, T1: Into<T>, T2: Into<T>, T3: Into<T>> From<(T1, T2, T3)> for Vec3<T> {
     fn from((x, y, z): (T1, T2, T3)) -> Self {
@@ -601,9 +601,9 @@ impl<T> Vec4<T> {
     }
 }
 impl<T: Clone> Vec4<T> {
-    swizzle!([x, y, z, w] 2 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y, z, w] 3 prefix "implement_swizzle!(T, " suffix ");");
-    swizzle!([x, y, z, w] 4 prefix "implement_swizzle!(T, " suffix ");");
+    swizzle!([x, y, z, w] 2 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y, z, w] 3 prefix "implement_swizzle!(T," suffix ");");
+    swizzle!([x, y, z, w] 4 prefix "implement_swizzle!(T," suffix ");");
 }
 impl<T, T1: Into<T>, T2: Into<T>, T3: Into<T>, T4: Into<T>> From<(T1, T2, T3, T4)> for Vec4<T> {
     fn from((x, y, z, w): (T1, T2, T3, T4)) -> Self {
