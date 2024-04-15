@@ -103,7 +103,48 @@ pub trait CompleteVector<Rhs>:
     + Div<<Self as Vector>::Num, Output = Self>
 {
 }
-impl<T> CompleteVector<Vec2<T>> for Vec2<T> {}
+impl<
+        V: Into<Vec2<T>>,
+        T: Neg<Output = T>
+            + Add<T, Output = T>
+            + Sub<T, Output = T>
+            + Mul<T, Output = T>
+            + Div<T, Output = T>
+            + AddAssign<T>
+            + SubAssign<T>
+            + MulAssign<T>
+            + Clone,
+    > CompleteVector<V> for Vec2<T>
+{
+}
+impl<
+        V: Into<Vec3<T>>,
+        T: Neg<Output = T>
+            + Add<T, Output = T>
+            + Sub<T, Output = T>
+            + Mul<T, Output = T>
+            + Div<T, Output = T>
+            + AddAssign<T>
+            + SubAssign<T>
+            + MulAssign<T>
+            + Clone,
+    > CompleteVector<V> for Vec3<T>
+{
+}
+impl<
+        V: Into<Vec4<T>>,
+        T: Neg<Output = T>
+            + Add<T, Output = T>
+            + Sub<T, Output = T>
+            + Mul<T, Output = T>
+            + Div<T, Output = T>
+            + AddAssign<T>
+            + SubAssign<T>
+            + MulAssign<T>
+            + Clone,
+    > CompleteVector<V> for Vec4<T>
+{
+}
 
 pub trait IntoVector<T> {
     type Vector;
@@ -173,7 +214,7 @@ pub struct Vec2<T = f32> {
 }
 impl<T: Copy> Copy for Vec2<T> {}
 impl<T> Vec2<T> {
-    pub fn new(x: T, y: T) -> Self {
+    pub const fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
     pub fn fromprim(x: impl AsPrimitive<T>, y: impl AsPrimitive<T>) -> Self
@@ -341,7 +382,7 @@ pub struct Vec3<T = f32> {
 impl<T: Copy> Copy for Vec3<T> {}
 
 impl<T> Vec3<T> {
-    pub fn new(x: T, y: T, z: T) -> Self {
+    pub const fn new(x: T, y: T, z: T) -> Self {
         Self { x, y, z }
     }
 }
@@ -527,7 +568,7 @@ pub struct Vec4<T = f32> {
 impl<T: Copy> Copy for Vec4<T> {}
 
 impl<T> Vec4<T> {
-    pub fn new(x: T, y: T, z: T, w: T) -> Self {
+    pub const fn new(x: T, y: T, z: T, w: T) -> Self {
         Self { x, y, z, w }
     }
     pub fn fromprim(

@@ -1,11 +1,13 @@
 use bytemuck::Zeroable;
 
+use crate::prelude::*;
+
 #[derive(bytemuck::Pod, Zeroable, Clone, Copy)]
 // Required for compatibility with the u32 type
 #[repr(align(4))]
 #[repr(C)]
 #[cfg(target_endian = "little")]
-pub struct Pixel {
+pub struct Rgba {
     pub b: u8,
     pub g: u8,
     pub r: u8,
@@ -16,36 +18,36 @@ pub struct Pixel {
 #[repr(align(4))]
 #[repr(C)]
 #[cfg(target_endian = "big")]
-pub struct Pixel {
+pub struct Rgba {
     pub a: u8,
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 
-impl Pixel {
+impl Rgba {
     pub const fn black() -> Self {
-        Pixel::new(0, 0, 0, 255)
+        Rgba::new(0, 0, 0, 255)
     }
     pub const fn white() -> Self {
-        Pixel::new(255, 255, 255, 255)
+        Rgba::new(255, 255, 255, 255)
     }
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Pixel { r, g, b, a }
+        Rgba { r, g, b, a }
     }
 }
 
 pub struct Buffer {
-    pixels: Vec<Pixel>,
+    pixels: Vec<Rgba>,
     width: usize,
     height: usize,
 }
 
 impl Buffer {
-    pub fn new(width: usize, height: usize, fill: Pixel) -> Self {
+    pub fn new(width: usize, height: usize, fill: Rgba) -> Self {
         Self::new_with(width, height, |_, _| fill)
     }
-    pub fn new_with<F: FnMut(usize, usize) -> Pixel>(
+    pub fn new_with<F: FnMut(usize, usize) -> Rgba>(
         width: usize,
         height: usize,
         mut cb: F,
@@ -65,11 +67,14 @@ impl Buffer {
     pub fn as_rgba_mut(&mut self) -> &mut [u32] {
         bytemuck::cast_slice_mut(&mut self.pixels)
     }
-    pub fn inner_buf(&self) -> &[Pixel] {
+    pub fn inner_buf(&self) -> &[Rgba] {
         &self.pixels
     }
-    pub fn inner_buf_mut(&mut self) -> &mut [Pixel] {
+    pub fn inner_buf_mut(&mut self) -> &mut [Rgba] {
         &mut self.pixels
+    }
+    pub fn dimensions(&self) -> Vec2<usize> {
+        Vec2::new(self.width, self.height)
     }
     pub fn width(&self) -> usize {
         self.width
@@ -77,13 +82,13 @@ impl Buffer {
     pub fn height(&self) -> usize {
         self.height
     }
-    pub fn get(&self, x: usize, y: usize) -> Option<Pixel> {
+    pub fn get(&self, x: usize, y: usize) -> Option<Rgba> {
         if x >= self.width || y >= self.height {
             return None;
         }
         Some(unsafe { *self.get_unchecked(x, y) })
     }
-    pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Pixel> {
+    pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut Rgba> {
         if x >= self.width || y >= self.height {
             return None;
         }
@@ -92,16 +97,16 @@ impl Buffer {
     /// # Safety
     ///
     /// Requires x < width, y < height
-    pub unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Pixel {
+    pub unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Rgba {
         self.pixels.get_unchecked(y * self.width + x)
     }
     /// # Safety
     ///
     /// Requires x < width, y < height
-    pub unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Pixel {
+    pub unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Rgba {
         self.pixels.get_unchecked_mut(y * self.width + x)
     }
-    pub fn set(&mut self, x: usize, y: usize, value: Pixel) {
+    pub fn set(&mut self, x: usize, y: usize, value: Rgba) {
         let Some(pixel) = self.get_mut(x, y) else {
             panic!(
                 "Attempted to set pixel {x}, {y} in a {width}x{height} buffer",
@@ -111,19 +116,19 @@ impl Buffer {
         };
         *pixel = value;
     }
-    pub fn iter(&self) -> impl Iterator<Item = &Pixel> {
+    pub fn iter(&self) -> impl Iterator<Item = &Rgba> {
         self.pixels.iter()
     }
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Pixel> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Rgba> {
         self.pixels.iter_mut()
     }
-    pub fn iter_pos(&self) -> impl Iterator<Item = (usize, usize, &Pixel)> {
+    pub fn iter_pos(&self) -> impl Iterator<Item = (usize, usize, &Rgba)> {
         self.pixels
             .chunks_exact(self.width)
             .enumerate()
             .flat_map(|(y, row)| row.iter().enumerate().map(move |(x, pixel)| (x, y, pixel)))
     }
-    pub fn iter_pos_mut(&mut self) -> impl Iterator<Item = (usize, usize, &mut Pixel)> {
+    pub fn iter_pos_mut(&mut self) -> impl Iterator<Item = (usize, usize, &mut Rgba)> {
         self.pixels
             .chunks_exact_mut(self.width)
             .enumerate()
@@ -133,7 +138,7 @@ impl Buffer {
                     .map(move |(x, pixel)| (x, y, pixel))
             })
     }
-    pub fn resize_and_fill<F: FnMut(usize, usize) -> Pixel>(
+    pub fn resize_and_fill<F: FnMut(usize, usize) -> Rgba>(
         &mut self,
         width: usize,
         height: usize,
@@ -151,6 +156,6 @@ impl Buffer {
         self.height = height;
     }
     pub fn resize(&mut self, width: usize, height: usize) {
-        self.resize_and_fill(width, height, |_, _| Pixel::black())
+        self.resize_and_fill(width, height, |_, _| Rgba::black())
     }
 }

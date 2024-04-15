@@ -3,8 +3,9 @@ pub use types::*;
 pub mod prelude {
     use num_traits::AsPrimitive;
 
-    pub use super::buf::{Buffer, Pixel};
-    pub use super::vec::{IntoVector, Vec2, Vec3, Vec4, Vector};
+    pub use super::buf::{Buffer, Rgba};
+    pub use super::vec::{CompleteVector, IntoVector, Vec2, Vec3, Vec4, Vector};
+    pub use super::{CreateRay, Ray};
     pub type Vec2i = Vec2<i32>;
     pub type Vec3i = Vec3<i32>;
     pub type Vec4i = Vec4<i32>;
@@ -14,6 +15,15 @@ pub mod prelude {
     pub type Vec2f = Vec2<f32>;
     pub type Vec3f = Vec3<f32>;
     pub type Vec4f = Vec4<f32>;
+    pub type Ray2i = Ray<Vec2i>;
+    pub type Ray3i = Ray<Vec3i>;
+    pub type Ray4i = Ray<Vec4i>;
+    pub type Ray2u = Ray<Vec2u>;
+    pub type Ray3u = Ray<Vec3u>;
+    pub type Ray4u = Ray<Vec4u>;
+    pub type Ray2f = Ray<Vec2f>;
+    pub type Ray3f = Ray<Vec3f>;
+    pub type Ray4f = Ray<Vec4f>;
     pub fn vec2i(x: impl AsPrimitive<i32>, y: impl AsPrimitive<i32>) -> Vec2i {
         Vec2i::fromprim(x, y)
     }
