@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 
-members = ["renderer", "renderer_macros"]
+members = ["renderer", "renderer_macros", "renderer_types"]
 default-members = ["renderer"]
 
-[profile.dev.package.renderer_macros]
+[profile.dev.package."*"]
 opt-level = 3

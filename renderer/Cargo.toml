@@ -7,4 +7,6 @@ edition = "2021"
 bytemuck = { version = "1.15.0", features = ["derive"] }
 minifb = "0.25.0"
 num-traits = "0.2.18"
+rayon = "1.10.0"
 renderer_macros = { path = "../renderer_macros" }
+renderer_types = { version = "0.1.0", path = "../renderer_types" }

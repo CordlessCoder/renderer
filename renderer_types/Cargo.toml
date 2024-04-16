@@ -1,0 +1,9 @@
+[package]
+name = "renderer_types"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "1.15.0", features = ["derive"] }
+num-traits = "0.2.18"
+renderer_macros = { version = "0.1.0", path = "../renderer_macros" }

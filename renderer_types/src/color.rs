@@ -1,6 +1,8 @@
 use num_traits::Float;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
+use crate::vec::Vec3;
+
 use super::buf::Rgba;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -12,10 +14,6 @@ pub struct Color<T: Float> {
 
 impl<T: Float> Color<T> {
     pub fn new(r: T, g: T, b: T) -> Self {
-        let in_range = |v| v >= T::zero() && v <= T::one();
-        debug_assert!(in_range(r));
-        debug_assert!(in_range(g));
-        debug_assert!(in_range(b));
         Self { r, g, b }
     }
     pub fn clamp(mut self) -> Self {
@@ -25,15 +23,41 @@ impl<T: Float> Color<T> {
         self.b = clamp(self.b);
         self
     }
+    pub fn splat(v: T) -> Self {
+        Self { r: v, g: v, b: v }
+    }
+    pub fn black() -> Self {
+        Self::splat(T::zero())
+    }
+    pub fn white() -> Self {
+        Self::splat(T::one())
+    }
 }
 
 impl<T: Float> Color<T> {
     pub fn into_rgba(self) -> Rgba {
-        let max = T::from(256).unwrap();
+        let max = T::from(255).unwrap();
+        let clamp = |v: T| {
+            if !v.is_sign_positive() {
+                return T::zero();
+            }
+            if v > T::one() {
+                return T::one();
+            }
+            v
+        };
         let [r, g, b] = [self.r, self.g, self.b]
+            .map(clamp)
             .map(|v| v * max)
             .map(|c| c.to_u8().unwrap_or(255));
         Rgba::new(r, g, b, 255)
+    }
+}
+
+impl<T: Float> From<Vec3<T>> for Color<T> {
+    fn from(value: Vec3<T>) -> Self {
+        let Vec3 { x, y, z } = value;
+        Self { r: x, g: y, b: z }
     }
 }
 
