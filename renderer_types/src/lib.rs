@@ -9,7 +9,6 @@ pub struct Ray<Vec> {
     origin: Vec,
     direction: Vec,
 }
-
 impl<Vec: CompleteVector<Vec>> Ray<Vec> {
     pub const fn new(origin: Vec, direction: Vec) -> Self {
         Self { origin, direction }
@@ -36,9 +35,16 @@ impl<V: CompleteVector<V>> CreateRay for V {
     }
 }
 pub mod prelude {
-    use num_traits::AsPrimitive;
+    use num_traits::{AsPrimitive, Float};
+
+    pub type Colorf32 = Color<f32>;
+    pub type Colorf64 = Color<f64>;
+    pub fn color<T: Float>(r: T, g: T, b: T) -> Color<T> {
+        Color::new(r, g, b)
+    }
 
     pub use super::buf::{Buffer, Rgba};
+    pub use super::color::Color;
     pub use super::vec::{CompleteVector, IntoVector, Vec2, Vec3, Vec4, Vector};
     pub use super::{CreateRay, Ray};
     pub type Vec2i = Vec2<i32>;

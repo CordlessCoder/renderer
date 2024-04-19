@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use bytemuck::Zeroable;
-use num_traits::{real::Real, AsPrimitive, Float, MulAdd, Zero};
+use num_traits::{real::Real, AsPrimitive, Float, MulAdd, One, Zero};
 use renderer_macros::swizzle;
 
 impl<T: Zero> Zero for Vec2<T> {
@@ -82,6 +82,21 @@ pub trait Vector {
     fn unit(self) -> Self
     where
         Self::Num: Real;
+
+    /// Returns a new vector reflected against normal
+    ///
+    /// Normal needs to be a unit vector
+    fn reflect(self, normal: Self) -> Self
+    where
+        Self: Sized + Mul<Self::Num, Output = Self> + Sub<Self, Output = Self> + Clone,
+        Self::Num: Float
+            + Sized
+            + One
+            + MulAdd<Self::Num, Output = Self::Num>
+            + Mul<Self::Num, Output = Self::Num>,
+    {
+        self.clone() - normal.clone() * ((Self::Num::one() + Self::Num::one()) * self.dot(normal))
+    }
     fn dot(self, rhs: Self) -> Self::Num
     where
         Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>;
