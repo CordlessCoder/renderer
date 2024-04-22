@@ -19,21 +19,24 @@ where
     start * (T::one() - factor) + (end * factor)
 }
 
-fn angle_between(lhs: &Vec3f, rhs: &Vec3f) -> f32 {
-    let dot = rhs.dot(*lhs);
-
-    (dot / (lhs.len_squared() * rhs.len_squared()).sqrt()).acos()
-}
-
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
-pub struct HitRecord {
-    point: Vec3f,
-    normal: Vec3f,
-    t: f32,
-    front_face: bool,
+pub struct Hit {
+    pub point: Vec3f,
+    pub normal: Vec3f,
+    pub t: f32,
+    pub front_face: bool,
 }
 
-impl HitRecord {
+impl Hit {
+    pub fn new(point: Vec3f, t: f32, ray: &Ray3f, outward_normal: Vec3f) -> Self {
+        let mut h = Self {
+            point,
+            t,
+            ..Default::default()
+        };
+        h.set_normal(ray, outward_normal);
+        h
+    }
     /// Sets the hit record normal vector.
     /// NOTE: the parameter `outward_normal` is assumed to have unit length.
     pub fn set_normal(&mut self, ray: &Ray3f, outward_normal: Vec3f) {
@@ -46,7 +49,7 @@ impl HitRecord {
 }
 
 pub trait Object {
-    fn hit(&self, ray: &Ray3f, t_range: (f32, f32), hit_record: &mut HitRecord) -> bool;
+    fn hit(&self, ray: &Ray3f, t_range: (f32, f32)) -> Option<Hit>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -65,7 +68,7 @@ impl Sphere {
 }
 
 impl Object for Sphere {
-    fn hit(&self, ray: &Ray3f, (t_min, t_max): (f32, f32), hit_record: &mut HitRecord) -> bool {
+    fn hit(&self, ray: &Ray3f, (t_min, t_max): (f32, f32)) -> Option<Hit> {
         let oc = self.center - *ray.origin();
         let a = ray.direction().len_squared();
         let h = ray.direction().dot(oc);
@@ -73,7 +76,7 @@ impl Object for Sphere {
 
         let discriminant = h * h - a * c;
         if discriminant < 0. {
-            return false;
+            return None;
         }
         let sqrtd = discriminant.sqrt();
         // Find the nearest root that lies in the acceptable range.
@@ -81,45 +84,53 @@ impl Object for Sphere {
         if root <= t_min || t_max <= root {
             root = (h + sqrtd) / a;
             if root <= t_min || t_max <= root {
-                return false;
+                return None;
             }
         }
 
-        hit_record.t = root;
-        hit_record.point = ray.at(root);
-        let normal = (hit_record.point - self.center) / self.radius;
-        hit_record.set_normal(ray, normal);
-
-        true
+        let point = ray.at(root);
+        Some(Hit::new(
+            point,
+            root,
+            ray,
+            (point - self.center) / self.radius,
+        ))
     }
 }
 
 fn ray_color(ray: &Ray3f) -> Rgba {
-    fn environment(ray: &Ray3f) -> Color<f32> {
-        let a = ray.direction().unit().z.mul_add(0.5, 0.5);
-        if a < 0.5 {
-            return Color::new(0.1, 0.1, 0.1);
-        }
-        lerp(Color::new(1.0, 1.0, 1.0) * 0.0, SHADE, a)
-    }
+    // fn environment(ray: &Ray3f) -> Color<f32> {
+    //     let a = ray.direction().unit().z.mul_add(0.5, 0.5);
+    //     if a < 0.5 {
+    //         return Color::new(0.1, 0.1, 0.1);
+    //     }
+    //     lerp(Color::new(1.0, 1.0, 1.0) * 0.0, SHADE, a)
+    // }
 
     const ILLUMINATED: Color<f32> = Color::new(0.953125, 0.910156, 0.605469);
     const SHADE: Color<f32> = Color::new(0.529, 0.808, 0.922);
     const SHADE_FACTOR: f32 = 0.0;
     let sun_ray = vec3f(2, 2, 8).to(vec3f(0, 0, 0)).direction().unit();
-    // let center = vec3f(0, 3, 0);
-    // if let Some(t) = sphere_hit(center, 0.5, ray) {
-    //     // dbg!(t);
-    //     let hit = ray.at(t);
-    //     let mut normal = hit - center;
-    //     normal = normal.unit();
+
+    let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
+    // // lerp(Color::black(), Color::white(), ray.at(1.).z * 0.5 + 0.5).into_rgba()
+    // let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
+    // let mut rec = HitRecord::default();
+    // if sphere.hit(ray, (0.0, 10000.0), &mut rec) {
+    //     let surface = Colorf32::from_rgb(206, 210, 215) * 0.7;
+    //     let normal = rec.normal;
+    //     // let sun_angle = angle_between(&normal, &sun_ray);
+    //     // let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
+    //
+    //     let reflected = *ray.direction() - normal * (2. * normal.dot(*ray.direction()));
+    //     let reflected = ray.direction().reflect(normal);
+    //     let reflected_ray = Ray3f::new(rec.point, reflected);
+    //     let fresnel = 1. - angle_between(&normal, ray.direction()) / PI;
+    //
+    //     let environment = environment(&reflected_ray);
     //     let sun_angle = angle_between(&normal, &sun_ray);
-    //     let factor = ((sun_angle / PI - shade_factor) * (1. / (1. - shade_factor))).clamp(0.0, 1.0);
-    //
-    //     let reflected = normal * (2. * ray.direction().dot(normal)) - *ray.direction();
-    //
-    //     let a = reflected.z.mul_add(0.5, 0.5);
-    //     let environment = lerp(Color::new(1.0, 1.0, 1.0) * 0.3, shade, a);
+    //     let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
+    //     let surface = lerp(surface, ILLUMINATED, factor);
     //     // normal *= 0.5;
     //     // normal += Vec3f::splat(0.5);
     //     // // normal.y *= -1.;
@@ -127,40 +138,12 @@ fn ray_color(ray: &Ray3f) -> Rgba {
     //     // let color = Color::from(normal.xzy());
     //     // // n.y *= 1.;
     //     // let color = Color::from(normal.zzz());
-    //     let color = lerp(environment, illuminated, 0.0);
+    //     let color = lerp(environment, ILLUMINATED, factor) * surface;
+    //     // let color = lerp(surface, environment, fresnel);
+    //     // let color = lerp(Colorf32::black(), Colorf32::white(), fresnel);
     //     return color.into_rgba();
-    // }
-    // // lerp(Color::black(), Color::white(), ray.at(1.).z * 0.5 + 0.5).into_rgba()
-    let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
-    let mut rec = HitRecord::default();
-    if sphere.hit(ray, (0.0, 10000.0), &mut rec) {
-        let surface = Colorf32::from_rgb(206, 210, 215) * 0.7;
-        let normal = rec.normal;
-        // let sun_angle = angle_between(&normal, &sun_ray);
-        // let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
-
-        // let reflected = *ray.direction() - normal * (2. * normal.dot(*ray.direction()));
-        let reflected = ray.direction().reflect(normal);
-        let reflected_ray = Ray3f::new(rec.point, reflected);
-        let fresnel = 1. - angle_between(&normal, ray.direction()) / PI;
-
-        let environment = environment(&reflected_ray);
-        let sun_angle = angle_between(&normal, &sun_ray);
-        let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
-        let surface = lerp(surface, ILLUMINATED, factor);
-        // normal *= 0.5;
-        // normal += Vec3f::splat(0.5);
-        // // normal.y *= -1.;
-        // // // dbg!(n.y);
-        // let color = Color::from(normal.xzy());
-        // // n.y *= 1.;
-        // let color = Color::from(normal.zzz());
-        // let color = lerp(environment, ILLUMINATED, factor) * surface;
-        let color = lerp(surface, environment, fresnel);
-        // let color = lerp(Colorf32::black(), Colorf32::white(), fresnel);
-        return color.into_rgba();
-    };
-    environment(ray).into_rgba()
+    // };
+    // environment(ray).into_rgba()
 }
 
 fn main() {
@@ -179,7 +162,7 @@ fn main() {
     const WIDTH: usize = 1024;
     const HEIGHT: usize = 512;
     const DYNAMIC_SIZE: bool = true;
-    const SCALE: minifb::Scale = minifb::Scale::X1;
+    const SCALE: minifb::Scale = minifb::Scale::X4;
     const WIN_WIDTH: usize = 1024;
     const WIN_HEIGHT: usize = 512;
     const REFRESH_RATE: u64 = 240;

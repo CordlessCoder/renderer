@@ -100,6 +100,15 @@ pub trait Vector {
     fn dot(self, rhs: Self) -> Self::Num
     where
         Self::Num: MulAdd<Self::Num, Output = Self::Num> + Mul<Self::Num, Output = Self::Num>;
+
+    /// Returns the angle between the vectors in radians
+    fn angle_to(&self, rhs: &Self) -> Self::Num
+    where
+        Self: Sized + Clone,
+        Self::Num: Float + MulAdd<Self::Num, Output = Self::Num>,
+    {
+        num_traits::Float::acos(self.clone().dot(rhs.clone()) / (self.len() * rhs.len()))
+    }
 }
 
 pub trait CompleteVector<Rhs>:
@@ -250,13 +259,6 @@ impl<T> Vec2<T> {
             x: x.into(),
             y: y.into(),
         }
-    }
-    /// Returns the angle between the vectors in radians
-    pub fn angle_to(&self, rhs: &Self) -> T
-    where
-        T: Float + MulAdd<T, Output = T>,
-    {
-        (self.dot(*rhs) / (self.len() * rhs.len())).acos()
     }
 }
 impl<T: Clone> Vec2<T> {
