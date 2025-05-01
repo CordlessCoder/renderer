@@ -5,7 +5,7 @@ use crate::vec::Vec3;
 
 use super::buf::Rgba;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct Color<T: Float = f32> {
     pub r: T,
     pub g: T,

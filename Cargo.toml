@@ -6,3 +6,8 @@ default-members = ["renderer"]
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[workspace.dependencies]
+bytemuck = { version = "^1.23", features = ["derive"] }
+num-traits = "^0.2.19"
+winnow = "^0.7.7"

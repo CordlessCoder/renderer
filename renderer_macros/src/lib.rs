@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use winnow::{ascii, combinator, prelude::*, token};
 
-fn generate_combination_indices(pool_size: usize, items: usize, mut cb: impl FnMut(&[usize])) {
+fn generate_permutation_indices(pool_size: usize, items: usize, mut cb: impl FnMut(&[usize])) {
     if items == 0 {
         return;
     };
@@ -105,7 +105,7 @@ pub fn swizzle(input: TokenStream) -> TokenStream {
 
     let mut out = String::new();
 
-    generate_combination_indices(arr.len(), len, |indices| {
+    generate_permutation_indices(arr.len(), len, |indices| {
         out += &prefix;
         indices
             .iter()

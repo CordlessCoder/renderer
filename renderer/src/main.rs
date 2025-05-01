@@ -4,9 +4,13 @@ use rayon::{
     iter::{IndexedParallelIterator, ParallelIterator},
     slice::ParallelSliceMut,
 };
+// use rayon::{
+//     iter::{IndexedParallelIterator, ParallelIterator},
+//     slice::ParallelSliceMut,
+// };
 use std::{
     f32::consts::PI,
-    ops::{Add, Mul},
+    ops::{Add, Mul, RangeBounds},
     time::{Duration, Instant},
 };
 
@@ -49,7 +53,7 @@ impl Hit {
 }
 
 pub trait Object {
-    fn hit(&self, ray: &Ray3f, t_range: (f32, f32)) -> Option<Hit>;
+    fn hit(&self, ray: &Ray3f, t_range: impl RangeBounds<f32> + Clone) -> Option<Hit>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -68,7 +72,7 @@ impl Sphere {
 }
 
 impl Object for Sphere {
-    fn hit(&self, ray: &Ray3f, (t_min, t_max): (f32, f32)) -> Option<Hit> {
+    fn hit(&self, ray: &Ray3f, t_range: impl RangeBounds<f32>) -> Option<Hit> {
         let oc = self.center - *ray.origin();
         let a = ray.direction().len_squared();
         let h = ray.direction().dot(oc);
@@ -81,9 +85,10 @@ impl Object for Sphere {
         let sqrtd = discriminant.sqrt();
         // Find the nearest root that lies in the acceptable range.
         let mut root = (h - sqrtd) / a;
-        if root <= t_min || t_max <= root {
+
+        if !t_range.contains(&root) {
             root = (h + sqrtd) / a;
-            if root <= t_min || t_max <= root {
+            if !t_range.contains(&root) {
                 return None;
             }
         }
@@ -98,55 +103,69 @@ impl Object for Sphere {
     }
 }
 
-fn ray_color(ray: &Ray3f) -> Rgba {
-    // fn environment(ray: &Ray3f) -> Color<f32> {
-    //     let a = ray.direction().unit().z.mul_add(0.5, 0.5);
-    //     if a < 0.5 {
-    //         return Color::new(0.1, 0.1, 0.1);
-    //     }
-    //     lerp(Color::new(1.0, 1.0, 1.0) * 0.0, SHADE, a)
-    // }
+impl<T: Object> Object for [T] {
+    fn hit(&self, ray: &Ray3f, t_range: impl RangeBounds<f32> + Clone) -> Option<Hit> {
+        self.iter()
+            .flat_map(|o| o.hit(ray, t_range.clone()))
+            .min_by(|a, b| a.t.total_cmp(&b.t))
+    }
+}
+
+fn ray_color(ray: &Ray3f, t_range: impl RangeBounds<f32> + Clone) -> Colorf32 {
+    fn environment(ray: &Ray3f) -> Color<f32> {
+        let a = ray.direction().unit().z.mul_add(0.5, 0.5);
+        // if a < 0.5 {
+        //     return Color::new(0.1, 0.1, 0.1);
+        // }
+        lerp(Color::new(1.0, 1.0, 1.0) * 0.0, SHADE, a)
+        // Color::from(*ray.direction())
+    }
 
     const ILLUMINATED: Color<f32> = Color::new(0.953125, 0.910156, 0.605469);
     const SHADE: Color<f32> = Color::new(0.529, 0.808, 0.922);
     const SHADE_FACTOR: f32 = 0.0;
-    let sun_ray = vec3f(2, 2, 8).to(vec3f(0, 0, 0)).direction().unit();
-
-    let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
-    // // lerp(Color::black(), Color::white(), ray.at(1.).z * 0.5 + 0.5).into_rgba()
-    // let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
-    // let mut rec = HitRecord::default();
-    // if sphere.hit(ray, (0.0, 10000.0), &mut rec) {
-    //     let surface = Colorf32::from_rgb(206, 210, 215) * 0.7;
-    //     let normal = rec.normal;
-    //     // let sun_angle = angle_between(&normal, &sun_ray);
-    //     // let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
+    // let sun_ray = vec3f(2, 2, 8).to(vec3f(0, 0, 0)).direction().unit();
     //
-    //     let reflected = *ray.direction() - normal * (2. * normal.dot(*ray.direction()));
-    //     let reflected = ray.direction().reflect(normal);
-    //     let reflected_ray = Ray3f::new(rec.point, reflected);
-    //     let fresnel = 1. - angle_between(&normal, ray.direction()) / PI;
-    //
-    //     let environment = environment(&reflected_ray);
-    //     let sun_angle = angle_between(&normal, &sun_ray);
-    //     let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
-    //     let surface = lerp(surface, ILLUMINATED, factor);
-    //     // normal *= 0.5;
-    //     // normal += Vec3f::splat(0.5);
-    //     // // normal.y *= -1.;
-    //     // // // dbg!(n.y);
-    //     // let color = Color::from(normal.xzy());
-    //     // // n.y *= 1.;
-    //     // let color = Color::from(normal.zzz());
-    //     let color = lerp(environment, ILLUMINATED, factor) * surface;
-    //     // let color = lerp(surface, environment, fresnel);
-    //     // let color = lerp(Colorf32::black(), Colorf32::white(), fresnel);
-    //     return color.into_rgba();
-    // };
-    // environment(ray).into_rgba()
+    // // let sphere = Sphere::new(vec3f(0, 3, 0), 0.5);
+    // // Rgba::white()
+    // // // lerp(Color::black(), Color::white(), ray.at(1.).z * 0.5 + 0.5).into_rgba()
+    let objects = [
+        Sphere::new(vec3f(0, 3, 0), 0.4),
+        Sphere::new(vec3f(0.2, 1, 0), 0.1),
+    ];
+    // // let mut rec = HitRecord::default();
+    if let Some(hit) = objects.hit(ray, t_range.clone()) {
+        // let normal = hit.normal;
+        //     // let sun_angle = angle_between(&normal, &sun_ray);
+        //     // let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
+        //
+        //     let reflected = ray.direction().reflect(normal);
+        //     let reflected_ray = Ray3f::new(hit.point, reflected);
+        //     let fresnel = normal.angle_to(ray.direction()).mul_add(-2. / PI, 2.);
+        //
+        //     let external = ray_color(ray, t_range.clone());
+        //     let sun_angle = normal.angle_to(&sun_ray);
+        //     let factor = ((sun_angle / PI - SHADE_FACTOR) * (1. / (1. - SHADE_FACTOR))).clamp(0.0, 1.0);
+        //     // let color = lerp(SHADE * SHADE_FACTOR, ILLUMINATED, factor);
+        //     // let color = Color::black();
+        //     // let color = Color::white() * 0.4;
+        //     // let color = lerp(Color::white() * 0.2, external, lerp(0.4, fresnel, fresnel));
+        //
+        //     // let color = Color::splat((Color::splat(fresnel) > Color::splat(0.1)) as u8 as f32);
+        //     let color = external;
+        //     return color;
+        //     // return Color::from(hit.normal * -1.).into_rgba();
+        return Color::from(hit.normal.zyx().map(|n| *n += 1.) * 0.5);
+    };
+    environment(ray)
+    // Rgba::black()
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        // .num_threads(8)
+        .build_global()
+        .unwrap();
     const fn scale_to_int(scale: minifb::Scale) -> u8 {
         use minifb::Scale::*;
         match scale {
@@ -162,10 +181,10 @@ fn main() {
     const WIDTH: usize = 1024;
     const HEIGHT: usize = 512;
     const DYNAMIC_SIZE: bool = true;
-    const SCALE: minifb::Scale = minifb::Scale::X4;
+    const SCALE: minifb::Scale = minifb::Scale::X1;
     const WIN_WIDTH: usize = 1024;
     const WIN_HEIGHT: usize = 512;
-    const REFRESH_RATE: u64 = 240;
+    const REFRESH_RATE: usize = 60;
 
     let mut window = Window::new(
         "renderer",
@@ -181,7 +200,7 @@ fn main() {
         },
     )
     .unwrap();
-    window.limit_update_rate(Some(Duration::from_nanos(1_000_000_000 / REFRESH_RATE)));
+    window.set_target_fps(REFRESH_RATE);
 
     let mut buf = Buffer::new(WIDTH, HEIGHT, Rgba::black());
 
@@ -204,7 +223,7 @@ fn main() {
         let camera_origin = 'cam: {
             let Some(mut pos) = window
                 .get_mouse_pos(minifb::MouseMode::Discard)
-                .map(|pos| pos.into_vector())
+                .map(<(f32, f32) as Into<Vec2<f32>>>::into)
             else {
                 break 'cam vec3f(0, 0, 0);
             };
@@ -231,7 +250,7 @@ fn main() {
                 line.iter_mut().enumerate().for_each(move |(x, p)| {
                     let ray_target = viewport_pixel_pos(x, y);
                     let ray = camera_origin.to(ray_target);
-                    *p = ray_color(&ray);
+                    *p = ray_color(&ray, ..1000.).into_rgba();
                 });
             });
         // // Run pixels in parallel
@@ -242,20 +261,21 @@ fn main() {
         //     *p = ray_color(&ray);
         // });
 
-        // // Run pixels on one thread
+        // Run pixels on one thread
         // buf.iter_pos_mut().for_each(|(x, y, p)| {
         //     let ray_target = viewport_pixel_pos(x, y);
         //     let ray = camera_origin.to(ray_target);
         //     // *p = Color::splat(ray.direction().z * 0.5 + 0.5).into_rgba()
-        //     *p = ray_color(&ray);
+        //     *p = ray_color(&ray, ..1000.).into_rgba();
         // });
+
+        let took = start.elapsed();
 
         window
             .update_with_buffer(buf.as_rgba(), buf.width(), buf.height())
             .unwrap();
-        let took = start.elapsed();
         println!(
-            "Rendering+display took {took:?}, {:.1}fps",
+            "Rendering took {took:?}, Would allow for {:.1}fps",
             1.0 / took.as_secs_f64()
         );
     }

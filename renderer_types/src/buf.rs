@@ -25,6 +25,12 @@ pub struct Rgba {
     pub b: u8,
 }
 
+impl From<u32> for Rgba {
+    fn from(value: u32) -> Self {
+        bytemuck::cast(value)
+    }
+}
+
 impl Rgba {
     pub const fn black() -> Self {
         Rgba::new(0, 0, 0, 255)
@@ -34,6 +40,10 @@ impl Rgba {
     }
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Rgba { r, g, b, a }
+    }
+    pub const fn from_u32_rgba(val: u32) -> Self {
+        let [r, g, b, a] = val.to_le_bytes();
+        Self { r, g, b, a }
     }
 }
 
