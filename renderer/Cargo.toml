@@ -5,8 +5,9 @@ edition = "2021"
 
 [dependencies]
 bytemuck = { workspace = true }
-minifb = "0.28"
 num-traits = { workspace = true }
 rayon = "^1.10"
 renderer_macros = { path = "../renderer_macros" }
 renderer_types = { version = "0.1.0", path = "../renderer_types" }
+softbuffer = "0.4.6"
+winit = "0.30.10"

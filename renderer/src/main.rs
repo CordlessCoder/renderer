@@ -1,16 +1,24 @@
-use minifb::{Key, Window, WindowOptions};
 use num_traits::Float;
 use rayon::{
     iter::{IndexedParallelIterator, ParallelIterator},
     slice::ParallelSliceMut,
 };
+use winit::{
+    dpi::PhysicalSize,
+    event::{Event, WindowEvent},
+    raw_window_handle::HasWindowHandle,
+    window::Window,
+};
+mod winit_app;
 // use rayon::{
 //     iter::{IndexedParallelIterator, ParallelIterator},
 //     slice::ParallelSliceMut,
 // };
 use std::{
     f32::consts::PI,
+    num::NonZeroU32,
     ops::{Add, Mul, RangeBounds},
+    rc::Rc,
     time::{Duration, Instant},
 };
 
@@ -166,117 +174,131 @@ fn main() {
         // .num_threads(8)
         .build_global()
         .unwrap();
-    const fn scale_to_int(scale: minifb::Scale) -> u8 {
-        use minifb::Scale::*;
-        match scale {
-            X1 => 1,
-            X2 => 2,
-            X4 => 4,
-            X8 => 8,
-            X16 => 16,
-            X32 => 32,
-            FitScreen => 1,
-        }
-    }
     const WIDTH: usize = 1024;
     const HEIGHT: usize = 512;
     const DYNAMIC_SIZE: bool = true;
-    const SCALE: minifb::Scale = minifb::Scale::X1;
     const WIN_WIDTH: usize = 1024;
     const WIN_HEIGHT: usize = 512;
-    const REFRESH_RATE: usize = 60;
 
-    let mut window = Window::new(
-        "renderer",
-        WIN_WIDTH,
-        WIN_HEIGHT,
-        WindowOptions {
-            // borderless: true,
-            title: true,
-            resize: DYNAMIC_SIZE,
-            scale: SCALE,
-            // transparency: true,
-            ..WindowOptions::default()
+    let mut app = winit_app::WinitAppBuilder::with_init(
+        |event_loop| {
+            let window = event_loop
+                .create_window(Window::default_attributes())
+                .unwrap();
+            Rc::new(window)
+        },
+        |event_loop, win| {
+            let context = softbuffer::Context::new(win.clone()).unwrap();
+            softbuffer::Surface::new(&context, win.clone()).unwrap()
         },
     )
-    .unwrap();
-    window.set_target_fps(REFRESH_RATE);
+    .with_event_handler(|window, surface, event, event_loop| {
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
 
-    let mut buf = Buffer::new(WIDTH, HEIGHT, Rgba::black());
+        let surface = surface.unwrap();
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-        if DYNAMIC_SIZE {
-            let (width, height) = window.get_size();
-            let (width, height) = (
-                width / scale_to_int(SCALE) as usize,
-                height / scale_to_int(SCALE) as usize,
-            );
-            buf.resize(width, height);
+        match event {
+            Event::WindowEvent {
+                window_id,
+                event: WindowEvent::RedrawRequested,
+            } if window_id == window.id() => {
+                let PhysicalSize { width, height } = window.inner_size();
+                surface
+                    .resize(
+                        NonZeroU32::new(width).unwrap(),
+                        NonZeroU32::new(height).unwrap(),
+                    )
+                    .unwrap();
+
+                let mut buf = surface.buffer_mut().unwrap();
+                let pixels = buf
+                    .chunks_exact_mut(width as usize)
+                    .enumerate()
+                    .flat_map(|(y, row)| row.iter_mut().enumerate().map(move |(x, p)| (x, y, p)));
+
+                let aspect = width as f32 / height as f32;
+                let viewport = {
+                    let height = 0.5;
+                    vec2f(aspect * height, height)
+                };
+                let focal_len: f32 = 1.0;
+
+                let camera_origin = vec3f(0, 0, 0);
+
+                for (x, y, pixel) in pixels {}
+            }
+            _ => (),
         }
-        let aspect = buf.width() as f32 / buf.height() as f32;
-        let viewport = {
-            let height = 0.5;
-            vec2f(aspect * height, height)
-        };
-        let focal_len: f32 = 1.0;
+        todo!();
+    });
 
-        let camera_origin = 'cam: {
-            let Some(mut pos) = window
-                .get_mouse_pos(minifb::MouseMode::Discard)
-                .map(<(f32, f32) as Into<Vec2<f32>>>::into)
-            else {
-                break 'cam vec3f(0, 0, 0);
-            };
-            pos.x /= buf.width() as f32;
-            pos.y /= buf.height() as f32;
-            pos -= vec2f(0.5, 0.5);
-            pos.x *= -2.0;
-            pos.y *= 2.0;
-            vec3f(pos.x, 0, pos.y)
-            // vec3f(0, 0, 0)
-        };
-        let viewport_pixel_pos = {
-            let delta = viewport.x / buf.width() as f32;
-            let origin = vec3f(-viewport.x / 2.0, focal_len, viewport.y / 2.0) + camera_origin;
-            move |x: usize, y: usize| origin + vec3f(delta * x as f32, 0, -delta * y as f32)
-        };
-        let dim = buf.dimensions();
-        let start = Instant::now();
-        buf.inner_buf_mut()
-            .par_chunks_exact_mut(dim.x)
-            .enumerate()
-            // Run scanlines in parallel
-            .for_each(|(y, line)| {
-                line.iter_mut().enumerate().for_each(move |(x, p)| {
-                    let ray_target = viewport_pixel_pos(x, y);
-                    let ray = camera_origin.to(ray_target);
-                    *p = ray_color(&ray, ..1000.).into_rgba();
-                });
-            });
-        // // Run pixels in parallel
-        // .flat_map(|(y, line)| line.par_iter_mut().enumerate().map(move |(x, p)| (x, y, p)))
-        // .for_each(|(x, y, p)| {
-        //     let ray_target = viewport_pixel_pos(x, y);
-        //     let ray = camera_origin.to(ray_target);
-        //     *p = ray_color(&ray);
-        // });
-
-        // Run pixels on one thread
-        // buf.iter_pos_mut().for_each(|(x, y, p)| {
-        //     let ray_target = viewport_pixel_pos(x, y);
-        //     let ray = camera_origin.to(ray_target);
-        //     // *p = Color::splat(ray.direction().z * 0.5 + 0.5).into_rgba()
-        //     *p = ray_color(&ray, ..1000.).into_rgba();
-        // });
-
-        let took = start.elapsed();
-
-        window
-            .update_with_buffer(buf.as_rgba(), buf.width(), buf.height())
-            .unwrap();
-        println!(
-            "Rendering took {took:?}, Would allow for {:.1}fps",
-            1.0 / took.as_secs_f64()
-        );
-    }
+    // while window.is_open() && !window.is_key_down(Key::Escape) {
+    //     if DYNAMIC_SIZE {
+    //         let (width, height) = window.get_size();
+    //         let (width, height) = (
+    //             width / scale_to_int(SCALE) as usize,
+    //             height / scale_to_int(SCALE) as usize,
+    //         );
+    //         buf.resize(width, height);
+    //     }
+    //
+    //     let camera_origin = 'cam: {
+    //         let Some(mut pos) = window
+    //             .get_mouse_pos(minifb::MouseMode::Discard)
+    //             .map(<(f32, f32) as Into<Vec2<f32>>>::into)
+    //         else {
+    //             break 'cam vec3f(0, 0, 0);
+    //         };
+    //         pos.x /= buf.width() as f32;
+    //         pos.y /= buf.height() as f32;
+    //         pos -= vec2f(0.5, 0.5);
+    //         pos.x *= -2.0;
+    //         pos.y *= 2.0;
+    //         vec3f(pos.x, 0, pos.y)
+    //         // vec3f(0, 0, 0)
+    //     };
+    //     let viewport_pixel_pos = {
+    //         let delta = viewport.x / buf.width() as f32;
+    //         let origin = vec3f(-viewport.x / 2.0, focal_len, viewport.y / 2.0) + camera_origin;
+    //         move |x: usize, y: usize| origin + vec3f(delta * x as f32, 0, -delta * y as f32)
+    //     };
+    //     let dim = buf.dimensions();
+    //     let start = Instant::now();
+    //     buf.inner_buf_mut()
+    //         .par_chunks_exact_mut(dim.x)
+    //         .enumerate()
+    //         // Run scanlines in parallel
+    //         .for_each(|(y, line)| {
+    //             line.iter_mut().enumerate().for_each(move |(x, p)| {
+    //                 let ray_target = viewport_pixel_pos(x, y);
+    //                 let ray = camera_origin.to(ray_target);
+    //                 *p = ray_color(&ray, ..1000.).into_rgba();
+    //             });
+    //         });
+    //     // // Run pixels in parallel
+    //     // .flat_map(|(y, line)| line.par_iter_mut().enumerate().map(move |(x, p)| (x, y, p)))
+    //     // .for_each(|(x, y, p)| {
+    //     //     let ray_target = viewport_pixel_pos(x, y);
+    //     //     let ray = camera_origin.to(ray_target);
+    //     //     *p = ray_color(&ray);
+    //     // });
+    //
+    //     // Run pixels on one thread
+    //     // buf.iter_pos_mut().for_each(|(x, y, p)| {
+    //     //     let ray_target = viewport_pixel_pos(x, y);
+    //     //     let ray = camera_origin.to(ray_target);
+    //     //     // *p = Color::splat(ray.direction().z * 0.5 + 0.5).into_rgba()
+    //     //     *p = ray_color(&ray, ..1000.).into_rgba();
+    //     // });
+    //
+    //     let took = start.elapsed();
+    //
+    //     window
+    //         .update_with_buffer(buf.as_rgba(), buf.width(), buf.height())
+    //         .unwrap();
+    //     println!(
+    //         "Rendering took {took:?}, Would allow for {:.1}fps",
+    //         1.0 / took.as_secs_f64()
+    //     );
+    // }
 }
